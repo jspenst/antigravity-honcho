@@ -4,8 +4,8 @@
   "version": "0.1.0",
   "description": "Persistent memory and social cognition for Antigravity via Honcho: automatic conversation capture via hooks and contextual querying via MCP.",
   "logo": "assets/logo.svg",
-  "homepage": "https://honcho.dev",
-  "repository": "https://github.com/plastic-labs/honcho",
+  "homepage": "https://github.com/jspenst/antigravity-honcho",
+  "repository": "https://github.com/jspenst/antigravity-honcho",
   "suggestedPrompts": [
     "What does Honcho already know about my preferences and projects?",
     "Search previous conversations for what we decided regarding architecture",

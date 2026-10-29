@@ -28,24 +28,24 @@ Clone the repository directly into your Antigravity plugins directory:
 
 **Windows (PowerShell):**
 ```powershell
-git clone https://github.com/<your-username>/antigravity-honcho.git "$env:USERPROFILE\.gemini\config\plugins\honcho"
+git clone https://github.com/jspenst/antigravity-honcho.git "$env:USERPROFILE\.gemini\config\plugins\honcho"
 ```
 
 **Linux / macOS (Bash):**
 ```bash
-git clone https://github.com/<your-username>/antigravity-honcho.git ~/.gemini/config/plugins/honcho
+git clone https://github.com/jspenst/antigravity-honcho.git ~/.gemini/config/plugins/honcho
 ```
 
 ### Option 2: 1-Line Installer
 
 **Windows:**
 ```powershell
-irm https://raw.githubusercontent.com/<your-username>/antigravity-honcho/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/jspenst/antigravity-honcho/main/install.ps1 | iex
 ```
 
 **Linux / macOS:**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/<your-username>/antigravity-honcho/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/jspenst/antigravity-honcho/main/install.sh | bash
 ```
 
 ### Option 3: Per Project / Team

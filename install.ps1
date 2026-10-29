@@ -1,6 +1,6 @@
 # PowerShell Installer for Antigravity Honcho Plugin
 # Usage:
-#   irm https://raw.githubusercontent.com/<user>/antigravity-honcho/main/install.ps1 | iex
+#   irm https://raw.githubusercontent.com/jspenst/antigravity-honcho/main/install.ps1 | iex
 
 $ErrorActionPreference = "Stop"
 
@@ -26,7 +26,7 @@ if ($ScriptDir -and (Test-Path (Join-Path $ScriptDir "plugin.json"))) {
             git -C $PluginDir pull
         } else {
             Remove-Item -Path $PluginDir -Recurse -Force -ErrorAction SilentlyContinue
-            git clone "https://github.com/plastic-labs/antigravity-honcho.git" $PluginDir
+            git clone "https://github.com/jspenst/antigravity-honcho.git" $PluginDir
         }
     } else {
         throw "Git not found. Please clone the repository directly to $PluginDir"

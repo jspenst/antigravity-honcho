@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Shell Installer for Antigravity Honcho Plugin
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/<user>/antigravity-honcho/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/jspenst/antigravity-honcho/main/install.sh | bash
 
 set -e
 
@@ -27,7 +27,7 @@ else
             git -C "$PLUGIN_DIR" pull
         else
             rm -rf "$PLUGIN_DIR"
-            git clone "https://github.com/plastic-labs/antigravity-honcho.git" "$PLUGIN_DIR"
+            git clone "https://github.com/jspenst/antigravity-honcho.git" "$PLUGIN_DIR"
         fi
     else
         echo "Error: git not found. Please clone the repository directly to $PLUGIN_DIR" >&2
