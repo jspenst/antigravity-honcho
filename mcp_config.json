@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "honcho": {
+      "command": "python",
+      "args": [
+        "-c",
+        "import pathlib, runpy; p = pathlib.Path('.agents/plugins/honcho/honcho_mcp.py'); p = p if p.is_file() else pathlib.Path.home() / '.gemini/config/plugins/honcho/honcho_mcp.py'; runpy.run_path(str(p), run_name='__main__')"
+      ]
+    }
+  }
+}

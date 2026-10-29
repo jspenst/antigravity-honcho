@@ -1,0 +1,19 @@
+{
+  "honcho-memory": {
+    "enabled": true,
+    "SessionStart": [
+      {
+        "type": "command",
+        "command": "python honcho_hook.py --event session-start",
+        "timeout": 8
+      }
+    ],
+    "Stop": [
+      {
+        "type": "command",
+        "command": "python honcho_hook.py --event stop",
+        "timeout": 10
+      }
+    ]
+  }
+}

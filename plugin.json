@@ -1,0 +1,14 @@
+{
+  "name": "honcho",
+  "displayName": "Honcho Memory",
+  "version": "0.1.0",
+  "description": "Memória persistente e cognição social para o Antigravity via Honcho: captura automática de conversas por hooks e consulta contextual via MCP.",
+  "logo": "assets/logo.svg",
+  "homepage": "https://honcho.dev",
+  "repository": "https://github.com/plastic-labs/honcho",
+  "suggestedPrompts": [
+    "O que o Honcho já sabe sobre minhas preferências e projetos?",
+    "Busque nas conversas anteriores o que decidimos sobre a arquitetura",
+    "Registre na memória do Honcho minha preferência por código limpo e tipado"
+  ]
+}
