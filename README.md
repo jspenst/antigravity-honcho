@@ -2,7 +2,7 @@
 
 <div align="center">
   <img src="assets/logo.svg" alt="Honcho Logo" width="120" />
-  <p><strong>Memória persistente, raciocínio em segundo plano e cognição social para o Google Antigravity.</strong></p>
+  <p><strong>Persistent memory, background reasoning, and social cognition for Google Antigravity.</strong></p>
 </div>
 
 ---
@@ -12,84 +12,84 @@
 [![Honcho](https://img.shields.io/badge/Honcho-v3-blue.svg)](https://honcho.dev)
 [![Python](https://img.shields.io/badge/Python-3.10+-yellow.svg)](https://python.org)
 
-Este plugin integra o [Honcho](https://honcho.dev) diretamente ao **Google Antigravity**, fornecendo:
-* **Captura automática e transparente:** Sem precisar chamar ferramentas manuais, cada turno do diálogo é salvo no Honcho com redação automática de tokens/senhas e colapso de código extenso.
-* **Recall na inicialização de conversas:** Ao abrir um chat, o Antigravity recebe o seu *Peer Card*, o perfil de usuário e o resumo do projeto automaticamente.
-* **Servidor MCP completo e ultrarrápido:** Ferramentas sob demanda para buscar conversas passadas (`search`), consultar o agente dialético (`chat`, `workspace_chat`) e gravar preferências duradouras (`create_conclusions`).
-* **Zero dependências externas:** O plugin roda em Python nativo com a biblioteca padrão (`urllib`, `json`, `pathlib`), sem precisar compilar Node/Bun na máquina cliente e sem risco de quebrar no boot.
+This plugin integrates [Honcho](https://honcho.dev) directly into **Google Antigravity**, providing:
+* **Transparent & Automatic Capture:** Every conversation turn is saved to Honcho automatically without manual tool calls, featuring secret/token redaction and long code block collapsing.
+* **Session Start Context Injection:** When opening a chat, Antigravity automatically receives your Peer Card, user representation profile, and project summary.
+* **Complete & Ultra-fast MCP Server:** On-demand tools to search past conversations (`search`), query the dialectic reasoning agent (`chat`, `workspace_chat`), and record durable preferences (`create_conclusions`).
+* **Zero External Dependencies:** Built with pure Python using only standard library modules (`urllib`, `json`, `pathlib`), requiring no Node/Bun runtime on the client machine and eliminating boot-time failure risks.
 
 ---
 
-## Instalação Rápida
+## Quick Installation
 
-### Opção 1: Via Git (Recomendada)
+### Option 1: Via Git (Recommended)
 
-Clone o repositório diretamente na pasta de plugins do Antigravity:
+Clone the repository directly into your Antigravity plugins directory:
 
-**No Windows (PowerShell):**
+**Windows (PowerShell):**
 ```powershell
-git clone https://github.com/<seu-usuario>/antigravity-honcho.git "$env:USERPROFILE\.gemini\config\plugins\honcho"
+git clone https://github.com/<your-username>/antigravity-honcho.git "$env:USERPROFILE\.gemini\config\plugins\honcho"
 ```
 
-**No Linux / macOS (Bash):**
+**Linux / macOS (Bash):**
 ```bash
-git clone https://github.com/<seu-usuario>/antigravity-honcho.git ~/.gemini/config/plugins/honcho
+git clone https://github.com/<your-username>/antigravity-honcho.git ~/.gemini/config/plugins/honcho
 ```
 
-### Opção 2: Instalador em 1 linha
+### Option 2: 1-Line Installer
 
 **Windows:**
 ```powershell
-irm https://raw.githubusercontent.com/<seu-usuario>/antigravity-honcho/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/<your-username>/antigravity-honcho/main/install.ps1 | iex
 ```
 
 **Linux / macOS:**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/<seu-usuario>/antigravity-honcho/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/<your-username>/antigravity-honcho/main/install.sh | bash
 ```
 
-### Opção 3: Por Projeto / Equipe
+### Option 3: Per Project / Team
 
-Se você deseja compartilhar o plugin com o seu time através do repositório do projeto, coloque a pasta em:
+To share this plugin with your team via the project repository, place the folder in:
 ```text
-seu-projeto/
+your-project/
 └── .agents/
     └── plugins/
         └── honcho/
 ```
-Qualquer desenvolvedor com Antigravity que abrir o projeto terá o Honcho ativado automaticamente.
+Any developer opening the project with Antigravity will automatically have Honcho enabled.
 
-> **Importante:** Após instalar, reinicie o Antigravity para que o novo plugin seja descoberto.
+> **Important:** Restart Antigravity after installation for the new plugin to be detected.
 
 ---
 
-## Ferramentas MCP Disponíveis
+## Available MCP Tools
 
-| Ferramenta | Descrição |
+| Tool | Description |
 | :--- | :--- |
-| `get_peer_context` | Retorna o Peer Card e a Representação consolidada do usuário |
-| `chat` | Faz perguntas em linguagem natural sobre o usuário ao modelo do Honcho |
-| `workspace_chat` | Pergunta transversal cruzando dados de todo o workspace |
-| `search` | Busca híbrida (semântica + BM25) nas mensagens e conversas salvas |
-| `query_conclusions` | Busca semântica nos fatos e preferências inferidos pelo Honcho |
-| `list_conclusions` | Lista as conclusões mais recentes extraídas pelo sistema |
-| `create_conclusions` | Salva imediatamente uma nova preferência durável ou decisão técnica |
+| `get_peer_context` | Returns the Peer Card and consolidated user representation learned by Honcho |
+| `chat` | Asks natural language questions about the user to Honcho's dialectic reasoning agent |
+| `workspace_chat` | Cross-project query across all sessions and projects within the Honcho workspace |
+| `search` | Hybrid search (semantic + BM25) across stored messages and past conversations |
+| `query_conclusions` | Semantic search over facts and preferences inferred by Honcho |
+| `list_conclusions` | Lists the most recent conclusions extracted by the system |
+| `create_conclusions` | Immediately records a new durable preference, fact, or architectural decision |
 
 ---
 
-## Configuração
+## Configuration
 
-O plugin lê automaticamente `~/.honcho/config.json` (compartilhado com Claude Code, Cursor, Codex e Honcho CLI) ou variáveis de ambiente:
+The plugin automatically reads `~/.honcho/config.json` (shared with Claude Code, Cursor, Codex, and the Honcho CLI) or environment variables:
 
-| Variável | Padrão | Descrição |
+| Variable | Default | Description |
 | :--- | :--- | :--- |
-| `HONCHO_URL` | `http://127.0.0.1:8000` | URL do backend Honcho (local, Docker ou Tailscale) |
-| `HONCHO_API_KEY` | *(vazio)* | Chave de API (opcional para self-hosted com `AUTH_USE_AUTH=false`) |
-| `HONCHO_WORKSPACE_ID` | `antigravity` | Workspace do Honcho onde os dados são gravados |
-| `HONCHO_PEER_NAME` | `<usuário do SO>` | Nome do seu peer humano |
-| `HONCHO_SESSION_STRATEGY` | `project` | `project` (sessão persistente por repositório) ou `conversation` (sessão por chat) |
+| `HONCHO_URL` | `http://127.0.0.1:8000` | Honcho backend URL (local, Docker, or Tailscale) |
+| `HONCHO_API_KEY` | *(empty)* | API key (optional for self-hosted instances with `AUTH_USE_AUTH=false`) |
+| `HONCHO_WORKSPACE_ID` | `antigravity` | Honcho workspace where data is stored |
+| `HONCHO_PEER_NAME` | `<OS username>` | Your human peer name |
+| `HONCHO_SESSION_STRATEGY` | `project` | `project` (persistent session per repo) or `conversation` (isolated session per chat) |
 
-### Exemplo de `~/.honcho/config.json`:
+### Example `~/.honcho/config.json`:
 ```json
 {
   "schemaVersion": 1,
@@ -102,29 +102,29 @@ O plugin lê automaticamente `~/.honcho/config.json` (compartilhado com Claude C
 
 ---
 
-## Validação e Diagnóstico
+## Validation and Diagnostics
 
-Para testar a conectividade com o Honcho a qualquer momento:
+To test connectivity with Honcho at any time:
 
 ```powershell
 python honcho_hook.py --test
 ```
 
-Saída esperada:
+Expected output:
 ```text
-=== Diagnóstico Antigravity <-> Honcho ===
-Ativo (enabled)   : True
+=== Antigravity <-> Honcho Diagnostics ===
+Active (enabled)  : True
 Honcho Base URL   : http://127.0.0.1:8000
 Workspace ID      : antigravity
-Peer do Usuário   : developer
-Peer do Agente    : antigravity
-Estratégia Sessão : project
-Arquivo de Estado : C:\Users\...\.honcho\antigravity_state.json
-Servidor Online   : SIM
+User Peer         : developer
+Agent Peer        : antigravity
+Session Strategy  : project
+State File        : C:\Users\...\.honcho\antigravity_state.json
+Server Online     : YES
 ```
 
 ---
 
-## Licença
+## License
 
-Distribuído sob a licença [MIT](LICENSE).
+Distributed under the [MIT](LICENSE) License.

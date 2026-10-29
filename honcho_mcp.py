@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-Servidor MCP local (Stdio) para o plugin Honcho no Antigravity.
+Local stdio MCP server for the Honcho plugin in Antigravity.
 
-Fala diretamente com a API v3 do Honcho (ex.: http://127.0.0.1:8000) usando
-apenas a biblioteca padrão do Python, compartilhando a mesma configuração
-de `honcho_hook.py` (`~/.honcho/config.json` e variáveis `HONCHO_*`).
+Communicates directly with the Honcho v3 API (e.g. http://127.0.0.1:8000) using
+only Python standard library modules, sharing the same configuration as
+`honcho_hook.py` (`~/.honcho/config.json` and `HONCHO_*` environment variables).
 
-Vantagem: inicializa instantaneamente mesmo que o Docker do Honcho ainda não
-esteja rodando no momento em que o Antigravity abre.
+Benefit: starts up instantly even if the Honcho Docker container is not yet
+running when Antigravity opens.
 """
 
 from __future__ import annotations
@@ -35,23 +35,23 @@ TOOLS: list[dict[str, Any]] = [
     {
         "name": "get_peer_context",
         "description": (
-            "Retorna o Peer Card e a Representação consolidada que o Honcho aprendeu "
-            "sobre o usuário (ou outro peer). Use no início de tarefas ou para revisar preferências."
+            "Returns the Peer Card and consolidated Representation that Honcho has learned "
+            "about the user (or another peer). Use at the start of tasks or when reviewing preferences."
         ),
         "inputSchema": {
             "type": "object",
             "properties": {
                 "peer_id": {
                     "type": "string",
-                    "description": "ID do peer (opcional; padrão: peer do usuário configurado).",
+                    "description": "Peer ID (optional; defaults to configured user peer).",
                 },
                 "search_query": {
                     "type": "string",
-                    "description": "Filtro semântico opcional para focar a representação em um tema.",
+                    "description": "Optional semantic filter to focus the representation on a specific topic.",
                 },
                 "max_conclusions": {
                     "type": "integer",
-                    "description": "Máximo de conclusões incluídas (1-100, padrão: 20).",
+                    "description": "Maximum number of conclusions to include (1-100, default: 20).",
                 },
             },
         },
@@ -59,28 +59,28 @@ TOOLS: list[dict[str, Any]] = [
     {
         "name": "chat",
         "description": (
-            "Faz uma pergunta em linguagem natural ao agente dialético do Honcho sobre o usuário "
-            "(ex.: 'Quais são as preferências de arquitetura e ferramentas do usuário?')."
+            "Ask a natural language question to Honcho's dialectic reasoning agent about the user "
+            "(e.g., 'What are the user's architectural and tool preferences?')."
         ),
         "inputSchema": {
             "type": "object",
             "properties": {
                 "query": {
                     "type": "string",
-                    "description": "Pergunta em linguagem natural.",
+                    "description": "Natural language question.",
                 },
                 "peer_id": {
                     "type": "string",
-                    "description": "ID do peer consultado (opcional; padrão: peer do usuário).",
+                    "description": "Queried peer ID (optional; defaults to user peer).",
                 },
                 "session_id": {
                     "type": "string",
-                    "description": "Opcional: restringir a resposta a uma sessão específica.",
+                    "description": "Optional: restrict the answer to a specific session.",
                 },
                 "reasoning_level": {
                     "type": "string",
                     "enum": ["minimal", "low", "medium", "high", "max"],
-                    "description": "Nível de profundidade do raciocínio (padrão: low).",
+                    "description": "Reasoning depth level (default: low).",
                 },
             },
             "required": ["query"],
@@ -89,19 +89,19 @@ TOOLS: list[dict[str, Any]] = [
     {
         "name": "workspace_chat",
         "description": (
-            "Faz uma pergunta transversal em todo o workspace do Honcho (cruzando múltiplos projetos/sessões)."
+            "Ask a cross-cutting question across the entire Honcho workspace (spanning multiple projects/sessions)."
         ),
         "inputSchema": {
             "type": "object",
             "properties": {
                 "query": {
                     "type": "string",
-                    "description": "Pergunta em linguagem natural sobre o workspace/projetos.",
+                    "description": "Natural language question about the workspace/projects.",
                 },
                 "reasoning_level": {
                     "type": "string",
                     "enum": ["minimal", "low", "medium", "high", "max"],
-                    "description": "Nível de raciocínio (padrão: low).",
+                    "description": "Reasoning depth level (default: low).",
                 },
             },
             "required": ["query"],
@@ -110,22 +110,22 @@ TOOLS: list[dict[str, Any]] = [
     {
         "name": "search",
         "description": (
-            "Busca híbrida (semântica + palavras-chave) nas mensagens gravadas de conversas anteriores."
+            "Hybrid search (semantic + keywords) across stored messages from previous conversations."
         ),
         "inputSchema": {
             "type": "object",
             "properties": {
                 "query": {
                     "type": "string",
-                    "description": "Termo ou pergunta para buscar nas conversas passadas.",
+                    "description": "Search query or term to find in past conversations.",
                 },
                 "session_id": {
                     "type": "string",
-                    "description": "Opcional: filtrar apenas dentro de uma sessão específica.",
+                    "description": "Optional: filter only within a specific session.",
                 },
                 "limit": {
                     "type": "integer",
-                    "description": "Número máximo de mensagens retornadas (1-50, padrão: 10).",
+                    "description": "Maximum number of messages returned (1-50, default: 10).",
                 },
             },
             "required": ["query"],
@@ -134,18 +134,18 @@ TOOLS: list[dict[str, Any]] = [
     {
         "name": "query_conclusions",
         "description": (
-            "Busca semântica nas conclusões/fatos derivados pelo Honcho sobre o usuário."
+            "Semantic search across conclusions/facts derived by Honcho about the user."
         ),
         "inputSchema": {
             "type": "object",
             "properties": {
                 "query": {
                     "type": "string",
-                    "description": "Consulta semântica (ex.: 'estilo de código', 'banco de dados').",
+                    "description": "Semantic query (e.g., 'code style', 'database preferences').",
                 },
                 "top_k": {
                     "type": "integer",
-                    "description": "Quantidade máxima de conclusões (1-50, padrão: 10).",
+                    "description": "Maximum number of conclusions (1-50, default: 10).",
                 },
             },
             "required": ["query"],
@@ -153,17 +153,17 @@ TOOLS: list[dict[str, Any]] = [
     },
     {
         "name": "list_conclusions",
-        "description": "Lista as conclusões mais recentes extraídas sobre o usuário.",
+        "description": "List the most recent conclusions extracted about the user.",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "size": {
                     "type": "integer",
-                    "description": "Quantidade de itens por página (1-100, padrão: 20).",
+                    "description": "Number of items per page (1-100, default: 20).",
                 },
                 "session_id": {
                     "type": "string",
-                    "description": "Opcional: listar apenas conclusões ligadas a esta sessão.",
+                    "description": "Optional: list only conclusions linked to this session.",
                 },
             },
         },
@@ -171,7 +171,7 @@ TOOLS: list[dict[str, Any]] = [
     {
         "name": "create_conclusions",
         "description": (
-            "Salva imediatamente uma ou mais conclusões/preferências duráveis sobre o usuário no Honcho."
+            "Immediately saves one or more durable conclusions/preferences about the user in Honcho."
         ),
         "inputSchema": {
             "type": "object",
@@ -179,11 +179,11 @@ TOOLS: list[dict[str, Any]] = [
                 "conclusions": {
                     "type": "array",
                     "items": {"type": "string"},
-                    "description": "Lista de fatos ou preferências concisas e autocontidas para memorizar.",
+                    "description": "List of concise, self-contained facts or preferences to memorize.",
                 },
                 "session_id": {
                     "type": "string",
-                    "description": "Opcional: ID da sessão onde a preferência surgiu.",
+                    "description": "Optional: session ID where the preference originated.",
                 },
             },
             "required": ["conclusions"],
@@ -297,9 +297,9 @@ def dispatch_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
         if name == "create_conclusions":
             raw_items = args.get("conclusions") or []
             if not isinstance(raw_items, list) or not raw_items:
-                return _text_result("A lista 'conclusions' não pode ser vazia.", is_error=True)
+                return _text_result("The 'conclusions' list cannot be empty.", is_error=True)
 
-            # Garante que o peer do usuário existe antes de criar conclusões
+            # Ensure user peer exists before creating conclusions
             client._request("POST", f"/v3/workspaces/{ws}/peers", body={"id": cfg.user_peer}, timeout=10.0)
 
             session_id = str(args["session_id"]).strip() if args.get("session_id") else None
@@ -325,7 +325,7 @@ def dispatch_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
             )
             return _text_result(res)
 
-        return _text_result(f"Ferramenta desconhecida: {name}", is_error=True)
+        return _text_result(f"Unknown tool: {name}", is_error=True)
 
     except urllib.error.HTTPError as http_err:
         detail = ""
@@ -334,13 +334,13 @@ def dispatch_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
         except Exception:
             pass
         return _text_result(
-            f"Erro HTTP {http_err.code} do Honcho ({cfg.base_url}): {detail or http_err.reason}",
+            f"Honcho HTTP error {http_err.code} ({cfg.base_url}): {detail or http_err.reason}",
             is_error=True,
         )
     except Exception as exc:
         return _text_result(
-            f"Não foi possível conectar ao Honcho em {cfg.base_url}. "
-            f"Verifique se o servidor está rodando. Detalhe: {exc}",
+            f"Unable to connect to Honcho at {cfg.base_url}. "
+            f"Ensure the server is running. Details: {exc}",
             is_error=True,
         )
 

@@ -6,14 +6,14 @@
 set -e
 
 PLUGIN_DIR="$HOME/.gemini/config/plugins/honcho"
-echo "Instalando plugin Antigravity Honcho em: $PLUGIN_DIR"
+echo "Installing Antigravity Honcho plugin to: $PLUGIN_DIR"
 
 mkdir -p "$PLUGIN_DIR"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)"
 
 if [ -n "$SCRIPT_DIR" ] && [ -f "$SCRIPT_DIR/plugin.json" ]; then
-    echo "Copiando arquivos locais..."
+    echo "Copying local files..."
     cp -R "$SCRIPT_DIR/"* "$PLUGIN_DIR/"
 else
     if command -v git >/dev/null 2>&1; then
@@ -24,10 +24,10 @@ else
             git clone "https://github.com/plastic-labs/antigravity-honcho.git" "$PLUGIN_DIR"
         fi
     else
-        echo "Erro: git não encontrado. Por favor clone o repositório diretamente em $PLUGIN_DIR" >&2
+        echo "Error: git not found. Please clone the repository directly to $PLUGIN_DIR" >&2
         exit 1
     fi
 fi
 
-echo "Plugin Honcho instalado com sucesso!"
-echo "Reinicie o Antigravity para que o plugin seja carregado."
+echo "Honcho plugin installed successfully!"
+echo "Restart Antigravity for the plugin to be loaded."

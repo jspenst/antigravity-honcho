@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 """
-Antigravity Lifecycle Hook para o Honcho (v3 API).
+Antigravity Lifecycle Hook for Honcho (v3 API).
 
-Captura automaticamente as mensagens trocadas no Antigravity (usuário e agente)
-ao final de cada turno (`Stop`) e injeta a memória acumulada no início de novas
-conversas (`SessionStart`).
+Automatically captures messages exchanged in Antigravity (user and agent)
+at the end of each turn (`Stop`) and injects accumulated memory at the start
+of new conversations (`SessionStart`).
 
-Características:
-- Zero dependências externas (usa apenas biblioteca padrão do Python 3.10+).
-- Fail-open: se o Honcho estiver offline, encerra rapidamente sem travar o Antigravity.
-- Cursor incremental por conversa (`~/.honcho/antigravity_state.json`) para não duplicar mensagens.
-- Redação básica de segredos/tokens e colapso de blocos longos de código.
-- Compatível com variáveis de ambiente (`HONCHO_*`) e `~/.honcho/config.json`.
+Features:
+- Zero external dependencies (uses only Python 3.10+ standard library).
+- Fail-open: exits quickly without blocking Antigravity if Honcho is offline.
+- Incremental conversation cursor (`~/.honcho/antigravity_state.json`) to prevent duplicating messages.
+- Automatic secret/token redaction and code block collapsing.
+- Compatible with environment variables (`HONCHO_*`) and `~/.honcho/config.json`.
 """
 
 from __future__ import annotations
@@ -561,20 +561,20 @@ def handle_session_start(payload: dict[str, Any], cfg: ResolvedConfig) -> dict[s
         summary_text = short_sum["content"].strip()
 
     if not (card_items or representation or summary_text):
-        log_debug(f"Sem memória prévia para {cfg.user_peer} na sessão {session_id}.")
+        log_debug(f"No prior memory for {cfg.user_peer} in session {session_id}.")
         return {}
 
     parts = [
-        f"[Memória Honcho — usuário: {cfg.user_peer} | workspace: {cfg.workspace} | sessão: {session_id}]",
-        "Considere as notas abaixo como contexto acumulado de sessões anteriores (verifique no código atual caso haja conflito).",
-        "A captura automática via hook está ativa para esta conversa.",
+        f"[Honcho Memory — user: {cfg.user_peer} | workspace: {cfg.workspace} | session: {session_id}]",
+        "Consider the notes below as accumulated context from previous sessions (verify against current code if there is conflict).",
+        "Automatic capture via hook is active for this conversation.",
     ]
     if card_items:
         parts.append("Peer Card:\n" + "\n".join(f"- {item}" for item in card_items))
     if representation:
-        parts.append("Representação do Usuário:\n" + clip(representation, MAX_REPRESENTATION_CHARS))
+        parts.append("User Representation:\n" + clip(representation, MAX_REPRESENTATION_CHARS))
     if summary_text:
-        parts.append("Resumo recente neste projeto:\n" + clip(summary_text, MAX_SUMMARY_CHARS))
+        parts.append("Recent summary for this project:\n" + clip(summary_text, MAX_SUMMARY_CHARS))
 
     return {
         "injectSteps": [
@@ -656,23 +656,23 @@ def detect_event(payload: dict[str, Any], explicit_event: str | None) -> str:
 
 
 def run_self_test(cfg: ResolvedConfig, sample_transcript: str | None) -> int:
-    print("=== Diagnóstico Antigravity <-> Honcho ===")
-    print(f"Ativo (enabled)   : {cfg.enabled}")
+    print("=== Antigravity <-> Honcho Diagnostics ===")
+    print(f"Active (enabled)  : {cfg.enabled}")
     print(f"Honcho Base URL   : {cfg.base_url}")
     print(f"Workspace ID      : {cfg.workspace}")
-    print(f"Peer do Usuário   : {cfg.user_peer}")
-    print(f"Peer do Agente    : {cfg.ai_peer}")
-    print(f"Estratégia Sessão : {cfg.session_strategy}")
-    print(f"Arquivo de Estado : {state_file_path()}")
+    print(f"User Peer         : {cfg.user_peer}")
+    print(f"Agent Peer        : {cfg.ai_peer}")
+    print(f"Session Strategy  : {cfg.session_strategy}")
+    print(f"State File        : {state_file_path()}")
 
     client = HonchoRestClient(cfg)
     healthy = client.health()
-    print(f"Servidor Online   : {'SIM' if healthy else 'NÃO (verifique se o container/API está rodando)'}")
+    print(f"Server Online     : {'YES' if healthy else 'NO (verify if container/API is running)'}")
 
     if sample_transcript:
         t_file = resolve_transcript_file(sample_transcript)
         if not t_file:
-            print(f"\nArquivo de transcript não encontrado: {sample_transcript}")
+            print(f"\nTranscript file not found: {sample_transcript}")
             return 1
         msgs, max_step = extract_new_messages(
             transcript_file=t_file,
@@ -681,7 +681,7 @@ def run_self_test(cfg: ResolvedConfig, sample_transcript: str | None) -> int:
             conversation_id="test-conv",
             model_name="test-model",
         )
-        print(f"\nLeitura de teste ({t_file.name}): {len(msgs)} mensagens extraídas (até step {max_step}).")
+        print(f"\nTest run ({t_file.name}): {len(msgs)} messages extracted (up to step {max_step}).")
         for idx, m in enumerate(msgs[:4], 1):
             preview = m["content"].replace("\n", " ")[:90]
             print(f"  {idx}. [{m['peer_id']}] {preview}...")
@@ -695,21 +695,21 @@ def main() -> int:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-    parser = argparse.ArgumentParser(description="Hook de memória Honcho para Antigravity")
+    parser = argparse.ArgumentParser(description="Honcho memory hook for Antigravity")
     parser.add_argument(
         "--event",
         choices=["auto", "session-start", "stop"],
         default="auto",
-        help="Tipo de evento do ciclo de vida do Antigravity (padrão: auto)",
+        help="Antigravity lifecycle event type (default: auto)",
     )
     parser.add_argument(
         "--test",
         action="store_true",
-        help="Executa diagnóstico de configuração e conectividade com o Honcho",
+        help="Run configuration and connectivity diagnostics with Honcho",
     )
     parser.add_argument(
         "--transcript",
-        help="Caminho opcional de um transcript.jsonl para testar extração com --test",
+        help="Optional path to a transcript.jsonl to test extraction with --test",
     )
     args = parser.parse_args()
 

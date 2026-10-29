@@ -1,7 +1,7 @@
-# Memória Persistente Honcho
+# Honcho Persistent Memory
 
-Você possui memória persistente conectada através do plugin **Honcho**:
+You have persistent memory connected via the **Honcho** plugin:
 
-- **Captura automática ativa:** Os Lifecycle Hooks (`SessionStart` e `Stop`) já injetam o contexto inicial da sessão e gravam automaticamente as mensagens do usuário e suas respostas finais ao término de cada turno. Não chame ferramentas manuais para duplicar o histórico do chat.
-- **Consulta proativa:** Quando contexto de conversas passadas, decisões arquiteturais anteriores ou preferências do usuário puderem ajudar, use as ferramentas do servidor MCP `honcho` (`get_peer_context`, `query_conclusions`, `search`, `chat` ou `workspace_chat`) antes de pedir para o usuário repetir informações.
-- **Preferências duráveis:** Sempre que o usuário declarar uma preferência duradoura, convenção de código ou decisão arquitetural importante, registre-a imediatamente com `create_conclusions` (omitindo qualquer chave/segredo).
+- **Active automatic capture:** Lifecycle Hooks (`SessionStart` and `Stop`) automatically inject initial session context and record user messages and your final responses at the end of each turn. Do not call manual tools to duplicate chat history.
+- **Proactive querying:** When past conversation context, prior architectural decisions, or user preferences can help, use the `honcho` MCP server tools (`get_peer_context`, `query_conclusions`, `search`, `chat`, or `workspace_chat`) before asking the user to repeat information.
+- **Durable preferences:** Whenever the user states a lasting preference, code convention, or significant architectural decision, immediately record it with `create_conclusions` (omitting any keys/secrets).

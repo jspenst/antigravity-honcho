@@ -5,20 +5,20 @@
 $ErrorActionPreference = "Stop"
 
 $PluginDir = Join-Path $env:USERPROFILE ".gemini\config\plugins\honcho"
-Write-Host "Instalando plugin Antigravity Honcho em: $PluginDir" -ForegroundColor Cyan
+Write-Host "Installing Antigravity Honcho plugin to: $PluginDir" -ForegroundColor Cyan
 
 New-Item -ItemType Directory -Path $PluginDir -Force | Out-Null
 
 $RepoBase = "https://raw.githubusercontent.com/plastic-labs/honcho/main/integrations/antigravity"
-# Se executado a partir de clone local:
+# If run from a local clone:
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 
 if ($ScriptDir -and (Test-Path (Join-Path $ScriptDir "plugin.json"))) {
-    Write-Host "Copiando arquivos locais..." -ForegroundColor Green
+    Write-Host "Copying local files..." -ForegroundColor Green
     Copy-Item -Path "$ScriptDir\*" -Destination $PluginDir -Recurse -Force
 } else {
-    Write-Host "Baixando arquivos do repositório..." -ForegroundColor Yellow
-    # Fallback git clone se disponível
+    Write-Host "Downloading files from repository..." -ForegroundColor Yellow
+    # Fallback to git clone if available
     if (Get-Command git -ErrorAction SilentlyContinue) {
         if (Test-Path (Join-Path $PluginDir ".git")) {
             git -C $PluginDir pull
@@ -27,9 +27,9 @@ if ($ScriptDir -and (Test-Path (Join-Path $ScriptDir "plugin.json"))) {
             git clone "https://github.com/plastic-labs/antigravity-honcho.git" $PluginDir
         }
     } else {
-        throw "Git não encontrado. Por favor clone o repositório diretamente em $PluginDir"
+        throw "Git not found. Please clone the repository directly to $PluginDir"
     }
 }
 
-Write-Host "Plugin Honcho instalado com sucesso!" -ForegroundColor Green
-Write-Host "Reinicie o Antigravity para que o plugin seja carregado." -ForegroundColor Cyan
+Write-Host "Honcho plugin installed successfully!" -ForegroundColor Green
+Write-Host "Restart Antigravity for the plugin to be loaded." -ForegroundColor Cyan
