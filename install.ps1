@@ -9,13 +9,15 @@ Write-Host "Installing Antigravity Honcho plugin to: $PluginDir" -ForegroundColo
 
 New-Item -ItemType Directory -Path $PluginDir -Force | Out-Null
 
-$RepoBase = "https://raw.githubusercontent.com/plastic-labs/honcho/main/integrations/antigravity"
 # If run from a local clone:
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 
 if ($ScriptDir -and (Test-Path (Join-Path $ScriptDir "plugin.json"))) {
     Write-Host "Copying local files..." -ForegroundColor Green
-    Copy-Item -Path "$ScriptDir\*" -Destination $PluginDir -Recurse -Force
+    $Excluded = @(".git", "__pycache__", "*.pyc", "*.pyo", "*.tmp", ".env*", "config.json", "*state.json", ".honcho", "*.pem", "*.key")
+    Get-ChildItem -Path $ScriptDir -Exclude $Excluded | ForEach-Object {
+        Copy-Item -Path $_.FullName -Destination $PluginDir -Recurse -Force
+    }
 } else {
     Write-Host "Downloading files from repository..." -ForegroundColor Yellow
     # Fallback to git clone if available

@@ -30,6 +30,7 @@ from honcho_hook import (  # noqa: E402
 )
 
 SUPPORTED_PROTOCOLS = ("2025-03-26", "2024-11-05")
+MAX_RPC_BODY_BYTES = 10 * 1024 * 1024
 
 TOOLS: list[dict[str, Any]] = [
     {
@@ -215,8 +216,9 @@ def dispatch_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
         if name == "get_peer_context":
             peer_id = sanitize_id(str(args.get("peer_id") or cfg.user_peer), cfg.user_peer)
             pid = urllib.parse.quote(peer_id, safe="")
+            max_conc = max(1, min(100, int(args.get("max_conclusions") or 20)))
             query: dict[str, Any] = {
-                "max_conclusions": int(args.get("max_conclusions") or 20),
+                "max_conclusions": max_conc,
             }
             if args.get("search_query"):
                 query["search_query"] = str(args["search_query"])
@@ -333,14 +335,18 @@ def dispatch_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
             detail = http_err.read().decode("utf-8", errors="replace")
         except Exception:
             pass
+        safe_url = redact_secrets(cfg.base_url)
+        safe_detail = redact_secrets(detail or str(http_err.reason))
         return _text_result(
-            f"Honcho HTTP error {http_err.code} ({cfg.base_url}): {detail or http_err.reason}",
+            f"Honcho HTTP error {http_err.code} ({safe_url}): {safe_detail}",
             is_error=True,
         )
     except Exception as exc:
+        safe_url = redact_secrets(cfg.base_url)
+        safe_exc = redact_secrets(str(exc))
         return _text_result(
-            f"Unable to connect to Honcho at {cfg.base_url}. "
-            f"Ensure the server is running. Details: {exc}",
+            f"Unable to connect to Honcho at {safe_url}. "
+            f"Ensure the server is running. Details: {safe_exc}",
             is_error=True,
         )
 
@@ -406,13 +412,20 @@ def main() -> int:
         use_content_length = False
         if stripped.lower().startswith(b"content-length:"):
             use_content_length = True
-            length = int(stripped.split(b":", 1)[1].strip())
+            try:
+                length = int(stripped.split(b":", 1)[1].strip())
+            except ValueError:
+                continue
             while True:
                 hdr = in_buf.readline()
                 if not hdr or hdr in (b"\r\n", b"\n"):
                     break
+            if length < 0 or length > MAX_RPC_BODY_BYTES:
+                continue
             raw_body = in_buf.read(length)
         else:
+            if len(stripped) > MAX_RPC_BODY_BYTES:
+                continue
             raw_body = stripped
 
         try:

@@ -51,7 +51,13 @@ USER_REQUEST_RE = re.compile(
 SECRET_RULES: list[tuple[re.Pattern[str], str]] = [
     (
         re.compile(
-            r"\b(\w*(?:PASSWORD|PASSWD|PWD|SECRET|TOKEN|API_?KEY|ACCESS_KEY|CREDENTIALS?)\w*)"
+            r"-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z0-9 ]*PRIVATE KEY-----"
+        ),
+        "[private key redacted]",
+    ),
+    (
+        re.compile(
+            r"\b(\w*(?:PASSWORD|PASSWD|PWD|SECRET|TOKEN|API_?KEY|ACCESS_KEY|PRIVATE_KEY|CLIENT_SECRET|CREDENTIALS?)\w*)"
             r"\s*=\s*(\"[^\"]*\"|'[^']*'|[^\s;|&\"']+)",
             re.IGNORECASE,
         ),
@@ -59,7 +65,15 @@ SECRET_RULES: list[tuple[re.Pattern[str], str]] = [
     ),
     (
         re.compile(
-            r"(--(?:password|passwd|pwd|token|api-?key|secret|auth)[= ])"
+            r"([\"']?\b\w*(?:password|passwd|pwd|secret|token|api_?key|access_?key|access_?token|refresh_?token|private_?key|client_?secret)\w*[\"']?\s*:\s*)"
+            r"(\"[^\"]+\"|'[^']+')",
+            re.IGNORECASE,
+        ),
+        r"\1\"[redacted]\"",
+    ),
+    (
+        re.compile(
+            r"(--(?:password|passwd|pwd|token|api-?key|access-?token|auth-?token|secret|auth)[= ])"
             r"(?:\"[^\"]*\"|'[^']*'|[^\s;|&\"']+)",
             re.IGNORECASE,
         ),
@@ -67,7 +81,7 @@ SECRET_RULES: list[tuple[re.Pattern[str], str]] = [
     ),
     (
         re.compile(
-            r"(authorization:\s*(?:bearer|basic|token)\s+)[^\s\"']+",
+            r"((?:authorization:\s*(?:bearer|basic|token)|x-api-key:|x-auth-token:|x-codeium-csrf-token:)\s*)[^\s\"']+",
             re.IGNORECASE,
         ),
         r"\1[redacted]",
@@ -78,9 +92,11 @@ SECRET_RULES: list[tuple[re.Pattern[str], str]] = [
     ),
     (
         re.compile(
-            r"\b(?:hch[_-]?[A-Za-z0-9_-]{16,}|AKIA[0-9A-Z]{16}|sk-[A-Za-z0-9_-]{16,}"
-            r"|(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}"
-            r"|xox[baprs]-[A-Za-z0-9-]{10,}|glpat-[A-Za-z0-9_-]{20,}|npm_[A-Za-z0-9]{36})\b"
+            r"\b(?:hch[_-]?[A-Za-z0-9_-]{16,}|(?:AKIA|ASIA)[0-9A-Z]{16}|sk-[A-Za-z0-9_-]{16,}"
+            r"|AIza[0-9A-Za-z_-]{35}|(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}"
+            r"|xox[baprs]-[A-Za-z0-9-]{10,}|glpat-[A-Za-z0-9_-]{20,}|npm_[A-Za-z0-9]{36}"
+            r"|pypi-[A-Za-z0-9_-]{32,}|hf_[A-Za-z0-9]{30,}|tskey-[A-Za-z0-9_-]{16,}"
+            r"|eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,})\b"
         ),
         "[redacted]",
     ),
@@ -91,7 +107,7 @@ FENCED_CODE_RE = re.compile(r"```[^\n]*\n([\s\S]*?)```")
 
 def log_debug(message: str) -> None:
     if os.environ.get("HONCHO_HOOK_DEBUG"):
-        sys.stderr.write(f"[{PLUGIN_NAME}] {message}\n")
+        sys.stderr.write(f"[{PLUGIN_NAME}] {redact_secrets(message)}\n")
 
 
 def sanitize_id(value: str, fallback: str = "default") -> str:
@@ -183,9 +199,13 @@ def load_config() -> ResolvedConfig:
                 break
 
     base_url = pick_str(["HONCHO_URL", "HONCHO_BASE_URL", "HONCHO_API_URL"], "baseUrl", DEFAULT_BASE_URL)
-    if not base_url.startswith(("http://", "https://")):
+    if "://" not in base_url:
         is_local = base_url.split("/")[0].split(":")[0].lower() in ("localhost", "127.0.0.1", "::1")
         base_url = f"{'http' if is_local else 'https'}://{base_url}"
+    parsed_url = urllib.parse.urlparse(base_url)
+    if parsed_url.scheme.lower() not in ("http", "https") or not parsed_url.netloc:
+        log_debug(f"Invalid URL scheme rejected, falling back to {DEFAULT_BASE_URL}")
+        base_url = DEFAULT_BASE_URL
 
     api_key = os.environ.get("HONCHO_API_KEY")
     if not api_key:
@@ -235,8 +255,11 @@ def load_config() -> ResolvedConfig:
 
 def git_origin_slug(root: str) -> str | None:
     try:
+        root_path = Path(root)
+        if not root_path.is_dir():
+            return None
         proc = subprocess.run(
-            ["git", "-C", root, "remote", "get-url", "origin"],
+            ["git", "-C", str(root_path), "remote", "get-url", "origin"],
             capture_output=True,
             text=True,
             timeout=1.5,
@@ -245,7 +268,9 @@ def git_origin_slug(root: str) -> str | None:
         if proc.returncode != 0:
             return None
         url = proc.stdout.strip()
-        match = re.search(r"[:/]([^/:]+)/([^/]+?)(?:\.git)?/?$", url)
+        # Strip embedded URL credentials (e.g. https://token@host/... or https://user:pass@host/...)
+        url = re.sub(r"^([a-z][a-z0-9+.-]*://)[^@/]+@", r"\1", url, flags=re.IGNORECASE)
+        match = re.search(r"[:/]([^/:@]+)/([^/]+?)(?:\.git)?/?$", url)
         if match:
             return f"{sanitize_id(match.group(1))}-{sanitize_id(match.group(2))}"
     except Exception:
@@ -270,6 +295,25 @@ def resolve_session_id(payload: dict[str, Any], cfg: ResolvedConfig) -> str:
     if conv_id:
         return f"{HOST}-{sanitize_id(conv_id[:16], 'session')}"
     return f"{HOST}-default"
+
+
+class _SafeRedirectHandler(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):  # type: ignore[override]
+        parsed_new = urllib.parse.urlparse(newurl)
+        if parsed_new.scheme.lower() not in ("http", "https"):
+            raise urllib.error.URLError(f"Blocked redirect to unsupported scheme: {parsed_new.scheme}")
+        new_req = super().redirect_request(req, fp, code, msg, headers, newurl)
+        if new_req is not None:
+            parsed_orig = urllib.parse.urlparse(req.full_url)
+            cross_origin = parsed_orig.netloc.lower() != parsed_new.netloc.lower()
+            downgraded = parsed_orig.scheme.lower() == "https" and parsed_new.scheme.lower() == "http"
+            if cross_origin or downgraded:
+                new_req.headers.pop("Authorization", None)
+                new_req.unredirected_hdrs.pop("Authorization", None)
+        return new_req
+
+
+_SAFE_OPENER = urllib.request.build_opener(_SafeRedirectHandler())
 
 
 class HonchoRestClient:
@@ -308,7 +352,7 @@ class HonchoRestClient:
             data = json.dumps(body, ensure_ascii=False).encode("utf-8")
 
         req = urllib.request.Request(url, data=data, headers=headers, method=method)
-        with urllib.request.urlopen(req, timeout=timeout or self.cfg.timeout_sec) as resp:
+        with _SAFE_OPENER.open(req, timeout=timeout or self.cfg.timeout_sec) as resp:
             raw = resp.read().decode("utf-8", errors="replace")
             return json.loads(raw) if raw.strip() else None
 
@@ -410,7 +454,7 @@ def load_state() -> dict[str, Any]:
 def save_state(state: dict[str, Any]) -> None:
     path = state_file_path()
     try:
-        path.parent.mkdir(parents=True, exist_ok=True)
+        path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
         # Mantém o arquivo enxuto (últimas 500 conversas)
         cursors = state.get("cursors", {})
         if isinstance(cursors, dict) and len(cursors) > 500:
@@ -422,6 +466,10 @@ def save_state(state: dict[str, Any]) -> None:
 
         tmp_path = path.with_suffix(".tmp")
         tmp_path.write_text(json.dumps(state, indent=2, ensure_ascii=False), encoding="utf-8")
+        try:
+            os.chmod(tmp_path, 0o600)
+        except OSError:
+            pass
         tmp_path.replace(path)
     except Exception as exc:
         log_debug(f"Erro ao salvar estado: {exc}")
@@ -438,6 +486,8 @@ def resolve_transcript_file(transcript_path_str: str) -> Path | None:
     if not transcript_path_str:
         return None
     p = Path(transcript_path_str)
+    if p.suffix.lower() != ".jsonl":
+        return None
     # Prefere transcript_full.jsonl quando disponível para evitar campos truncados
     full_candidate = p.with_name("transcript_full.jsonl")
     if full_candidate.is_file():
@@ -658,7 +708,7 @@ def detect_event(payload: dict[str, Any], explicit_event: str | None) -> str:
 def run_self_test(cfg: ResolvedConfig, sample_transcript: str | None) -> int:
     print("=== Antigravity <-> Honcho Diagnostics ===")
     print(f"Active (enabled)  : {cfg.enabled}")
-    print(f"Honcho Base URL   : {cfg.base_url}")
+    print(f"Honcho Base URL   : {redact_secrets(cfg.base_url)}")
     print(f"Workspace ID      : {cfg.workspace}")
     print(f"User Peer         : {cfg.user_peer}")
     print(f"Agent Peer        : {cfg.ai_peer}")

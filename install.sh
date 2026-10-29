@@ -14,7 +14,13 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)"
 
 if [ -n "$SCRIPT_DIR" ] && [ -f "$SCRIPT_DIR/plugin.json" ]; then
     echo "Copying local files..."
-    cp -R "$SCRIPT_DIR/"* "$PLUGIN_DIR/"
+    for item in "$SCRIPT_DIR"/*; do
+        base="$(basename "$item")"
+        case "$base" in
+            __pycache__|*.pyc|*.pyo|*.tmp|config.json|*state.json|*.pem|*.key) continue ;;
+        esac
+        cp -R "$item" "$PLUGIN_DIR/"
+    done
 else
     if command -v git >/dev/null 2>&1; then
         if [ -d "$PLUGIN_DIR/.git" ]; then
