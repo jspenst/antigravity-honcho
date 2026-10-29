@@ -79,17 +79,35 @@ Any developer opening the project with Antigravity will automatically have Honch
 
 ## Configuration
 
-The plugin automatically reads `~/.honcho/config.json` (shared with Claude Code, Cursor, Codex, and the Honcho CLI) or environment variables:
+Works with both **Honcho Cloud** (`https://api.honcho.dev`) and **self-hosted** instances (local, Docker, or Tailscale).
+
+The plugin automatically reads `~/.honcho/config.json` (shared with `honcho init`, Claude Code, Cursor, and Codex) or environment variables:
 
 | Variable | Default | Description |
 | :--- | :--- | :--- |
-| `HONCHO_URL` | `http://127.0.0.1:8000` | Honcho backend URL (local, Docker, or Tailscale) |
-| `HONCHO_API_KEY` | *(empty)* | API key (optional for self-hosted instances with `AUTH_USE_AUTH=false`) |
+| `HONCHO_API_KEY` | *(empty)* | API key (`hch-...` for Honcho Cloud; optional for self-hosted with `AUTH_USE_AUTH=false`) |
+| `HONCHO_URL` | `https://api.honcho.dev` *(with API key)* / `http://127.0.0.1:8000` *(without)* | Honcho backend URL (Cloud, local, Docker, or Tailscale) |
+| `HONCHO_ENVIRONMENT` | *(auto)* | Optional preset (`cloud`/`production`, `demo`, or `local`) when `HONCHO_URL` is omitted |
 | `HONCHO_WORKSPACE_ID` | `antigravity` | Honcho workspace where data is stored |
 | `HONCHO_PEER_NAME` | `<OS username>` | Your human peer name |
+| `HONCHO_AI_PEER` | `antigravity` | AI agent peer name |
 | `HONCHO_SESSION_STRATEGY` | `project` | `project` (persistent session per repo) or `conversation` (isolated session per chat) |
 
-### Example `~/.honcho/config.json`:
+### Example `~/.honcho/config.json` (Honcho Cloud)
+If you already ran `honcho init`, your existing `~/.honcho/config.json` works out of the box:
+```json
+{
+  "apiKey": "hch-your-api-key-here",
+  "peerName": "developer",
+  "hosts": {
+    "antigravity": {
+      "workspace": "antigravity"
+    }
+  }
+}
+```
+
+### Example `~/.honcho/config.json` (Self-Hosted)
 ```json
 {
   "schemaVersion": 1,
@@ -114,7 +132,8 @@ Expected output:
 ```text
 === Antigravity <-> Honcho Diagnostics ===
 Active (enabled)  : True
-Honcho Base URL   : http://127.0.0.1:8000
+Honcho Base URL   : https://api.honcho.dev
+Auth Configured   : YES (Bearer token)
 Workspace ID      : antigravity
 User Peer         : developer
 Agent Peer        : antigravity

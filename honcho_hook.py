@@ -33,7 +33,9 @@ HOST = "antigravity"
 PLUGIN_NAME = "antigravity-honcho"
 PLUGIN_VERSION = "0.1.0"
 
-DEFAULT_BASE_URL = "http://127.0.0.1:8000"
+DEFAULT_LOCAL_BASE_URL = "http://127.0.0.1:8000"
+DEFAULT_CLOUD_BASE_URL = "https://api.honcho.dev"
+DEFAULT_BASE_URL = DEFAULT_LOCAL_BASE_URL
 DEFAULT_WORKSPACE = "antigravity"
 DEFAULT_AI_PEER = "antigravity"
 
@@ -163,6 +165,22 @@ class ResolvedConfig:
         self.timeout_sec = timeout_sec
 
 
+def normalize_base_url(raw_url: str, fallback_url: str) -> str:
+    url = raw_url.strip().rstrip("/")
+    if not url:
+        return fallback_url
+    if "://" not in url:
+        host_part = url.split("/")[0].split(":")[0].lower()
+        is_local = host_part in ("localhost", "127.0.0.1", "::1")
+        url = f"{'http' if is_local else 'https'}://{url}"
+    parsed = urllib.parse.urlparse(url)
+    if parsed.scheme.lower() not in ("http", "https") or not parsed.netloc:
+        log_debug(f"Invalid URL scheme rejected, falling back to {fallback_url}")
+        return fallback_url
+    clean_path = re.sub(r"/v3/?$", "", parsed.path, flags=re.IGNORECASE).rstrip("/")
+    return urllib.parse.urlunparse((parsed.scheme.lower(), parsed.netloc, clean_path, "", "", ""))
+
+
 def load_config() -> ResolvedConfig:
     file_cfg: dict[str, Any] = {}
     cfg_path = Path.home() / ".honcho" / "config.json"
@@ -177,15 +195,17 @@ def load_config() -> ResolvedConfig:
     hosts = file_cfg.get("hosts") if isinstance(file_cfg.get("hosts"), dict) else {}
     host_cfg = hosts.get(HOST) if isinstance(hosts.get(HOST), dict) else {}
 
-    def pick_str(env_keys: list[str], key: str, default: str) -> str:
+    def pick_str(env_keys: list[str], keys: str | list[str], default: str) -> str:
         for env_key in env_keys:
             val = os.environ.get(env_key)
             if val and val.strip():
                 return val.strip()
+        cfg_keys = [keys] if isinstance(keys, str) else keys
         for block in (host_cfg, file_cfg):
-            val = block.get(key)
-            if isinstance(val, str) and val.strip():
-                return val.strip()
+            for key in cfg_keys:
+                val = block.get(key)
+                if isinstance(val, str) and val.strip():
+                    return val.strip()
         return default
 
     enabled = True
@@ -198,16 +218,7 @@ def load_config() -> ResolvedConfig:
                 enabled = block["enabled"]
                 break
 
-    base_url = pick_str(["HONCHO_URL", "HONCHO_BASE_URL", "HONCHO_API_URL"], "baseUrl", DEFAULT_BASE_URL)
-    if "://" not in base_url:
-        is_local = base_url.split("/")[0].split(":")[0].lower() in ("localhost", "127.0.0.1", "::1")
-        base_url = f"{'http' if is_local else 'https'}://{base_url}"
-    parsed_url = urllib.parse.urlparse(base_url)
-    if parsed_url.scheme.lower() not in ("http", "https") or not parsed_url.netloc:
-        log_debug(f"Invalid URL scheme rejected, falling back to {DEFAULT_BASE_URL}")
-        base_url = DEFAULT_BASE_URL
-
-    api_key = os.environ.get("HONCHO_API_KEY")
+    api_key = (os.environ.get("HONCHO_API_KEY") or "").strip() or None
     if not api_key:
         for block in (host_cfg, file_cfg):
             auth = block.get("auth")
@@ -216,12 +227,29 @@ def load_config() -> ResolvedConfig:
                     api_key = auth["apiKey"].strip()
                     break
                 oauth = auth.get("oauth")
-                if isinstance(oauth, dict) and isinstance(oauth.get("accessToken"), str):
+                if isinstance(oauth, dict) and isinstance(oauth.get("accessToken"), str) and oauth["accessToken"].strip():
                     api_key = oauth["accessToken"].strip()
                     break
             if isinstance(block.get("apiKey"), str) and block["apiKey"].strip():
                 api_key = block["apiKey"].strip()
                 break
+
+    env_name = pick_str(["HONCHO_ENVIRONMENT"], "environment", "").lower()
+    if env_name == "local":
+        fallback_url = DEFAULT_LOCAL_BASE_URL
+    elif env_name == "demo":
+        fallback_url = "https://demo.honcho.dev"
+    elif env_name in ("production", "prod", "cloud"):
+        fallback_url = DEFAULT_CLOUD_BASE_URL
+    else:
+        fallback_url = DEFAULT_CLOUD_BASE_URL if api_key else DEFAULT_LOCAL_BASE_URL
+
+    raw_base_url = pick_str(
+        ["HONCHO_URL", "HONCHO_BASE_URL", "HONCHO_API_URL"],
+        ["baseUrl", "environmentUrl"],
+        fallback_url,
+    )
+    base_url = normalize_base_url(raw_base_url, fallback_url)
 
     try:
         default_user = getpass.getuser()
@@ -230,8 +258,8 @@ def load_config() -> ResolvedConfig:
 
     workspace = pick_str(["HONCHO_WORKSPACE_ID", "HONCHO_WORKSPACE"], "workspace", DEFAULT_WORKSPACE)
     user_peer = pick_str(["HONCHO_PEER_NAME", "HONCHO_USER_PEER"], "peerName", default_user)
-    ai_peer = os.environ.get("HONCHO_AI_PEER", DEFAULT_AI_PEER).strip() or DEFAULT_AI_PEER
-    session_strategy = os.environ.get("HONCHO_SESSION_STRATEGY", "project").strip().lower()
+    ai_peer = pick_str(["HONCHO_AI_PEER"], "aiPeer", DEFAULT_AI_PEER)
+    session_strategy = pick_str(["HONCHO_SESSION_STRATEGY"], "sessionStrategy", "project").lower()
 
     timeout_sec = 4.0
     env_timeout = os.environ.get("HONCHO_TIMEOUT_SEC")
@@ -584,10 +612,10 @@ def handle_session_start(payload: dict[str, Any], cfg: ResolvedConfig) -> dict[s
     client = HonchoRestClient(cfg, model_name=model_name)
 
     try:
-        client.ensure_session_and_peers(session_id)
         state = load_state()
-        session_key = f"{cfg.workspace}:{session_id}"
+        session_key = f"{cfg.base_url}|{cfg.workspace}:{session_id}"
         if session_key not in state["initialized_sessions"]:
+            client.ensure_session_and_peers(session_id)
             state["initialized_sessions"].append(session_key)
             save_state(state)
 
@@ -671,7 +699,7 @@ def handle_stop(payload: dict[str, Any], cfg: ResolvedConfig) -> dict[str, Any]:
 
     session_id = resolve_session_id(payload, cfg)
     client = HonchoRestClient(cfg, model_name=model_name)
-    session_key = f"{cfg.workspace}:{session_id}"
+    session_key = f"{cfg.base_url}|{cfg.workspace}:{session_id}"
 
     try:
         if session_key not in state.get("initialized_sessions", []):
@@ -709,6 +737,7 @@ def run_self_test(cfg: ResolvedConfig, sample_transcript: str | None) -> int:
     print("=== Antigravity <-> Honcho Diagnostics ===")
     print(f"Active (enabled)  : {cfg.enabled}")
     print(f"Honcho Base URL   : {redact_secrets(cfg.base_url)}")
+    print(f"Auth Configured   : {'YES (Bearer token)' if cfg.api_key else 'NO (unauthenticated)'}")
     print(f"Workspace ID      : {cfg.workspace}")
     print(f"User Peer         : {cfg.user_peer}")
     print(f"Agent Peer        : {cfg.ai_peer}")
